@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ def load_data(data_directory):
 	test_df = pd.read_csv(os.path.join(data_directory, 'test.csv'), header=None)
 	return train_df, test_df
 
-def partition_data(df, split=.3):
+def partition_data(df, split=.2):
 	mask = np.random.rand(df.shape[0]) < split
 	return df[~mask], df[mask]
 
@@ -34,7 +35,7 @@ def run_epoch(generator, epoch_size, optimizer=None):
 		batch_count += 1
 		if batch_count >= epoch_size:
 			break
-		return np.array(losses).mean()
+	return np.array(losses).mean()
 
 data_params = {
 		'batch_size': 8,
@@ -45,7 +46,7 @@ data_params = {
 # 		'shuffle': True,
 # 		'num_workers': 4}
 
-num_epochs = 200
+num_epochs = 100
 train_epoch_size = 500
 validate_epoch_size = 100
 learning_rate = 1e-4
@@ -70,6 +71,8 @@ mlp = MLP(
 		output_dimension=train_df[train_df.columns[-1]].unique().shape[0],
 		num_layers=2)
 
+mlp = mlp.to(device)
+
 loss_function = nn.modules.loss.CrossEntropyLoss()
 
 optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate)
@@ -77,7 +80,10 @@ optimizer = torch.optim.Adam(mlp.parameters(), lr=learning_rate)
 train_losses = []
 validation_losses = []
 
+start_time = time.time()
 for epoch in range(num_epochs):
+	print('Epoch: {}'.format(epoch))
+	print('Runtime: {}'.format(time.time() - start_time))
 	train_losses.append(run_epoch(train_generator, train_epoch_size, optimizer))
 	validation_losses.append(run_epoch(validation_generator, validate_epoch_size))
 	torch.save(mlp, 'weights/mlp_weights_epoch_{}.pth'.format(epoch))
